@@ -1,0 +1,36 @@
+name: Production Org Daily Backup
+
+on:
+schedule:
+- cron: '0 2 * * *'
+workflow_dispatch:
+
+jobs:
+backup:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Checkout Code
+    uses: actions/checkout@v3
+
+  - name: Install Salesforce CLI
+    run: npm install --global @salesforce/cli
+
+  - name: Authenticate Production Org
+    run: |
+      echo "${{ secrets.SFDX_AUTH_URL_PROD }}" > auth.txt
+      sf org login sfdx-url --sfdx-url-file auth.txt --alias prod
+
+  - name: Retrieve Metadata
+    run: |
+      sf project retrieve start --target-org prod --metadata ApexClass,ApexTrigger,Flow,CustomObject,Layout,Profile,PermissionSet
+
+  - name: Commit and Push Backup
+    run: |
+      git config user.name "github-actions"
+      git config user.email "github-actions@github.com"
+      git add .
+      git commit -m "Production Backup $(date)" || echo "No changes"
+      git push
+```
